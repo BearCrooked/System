@@ -91,9 +91,17 @@ CREATE POLICY "records_select_all" ON work_records
 CREATE POLICY "records_insert_own" ON work_records
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+CREATE POLICY "records_update" ON work_records
+  FOR UPDATE USING (
+    auth.uid() = user_id OR public.is_admin()
+  )
+  WITH CHECK (
+    auth.uid() = user_id OR public.is_admin()
+  );
+
 CREATE POLICY "records_delete" ON work_records
   FOR DELETE USING (
-    public.is_admin() AND user_id <> auth.uid()
+    auth.uid() = user_id OR public.is_admin()
   );
 
 -- project_presets: 所有人可读，管理员可增删改

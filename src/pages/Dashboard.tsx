@@ -7,6 +7,7 @@ import {
   Card,
   Tag,
   message,
+  Popconfirm,
   Statistic,
   Row,
   Col,
@@ -18,6 +19,7 @@ import {
 } from 'antd';
 import {
   PlusOutlined,
+  DeleteOutlined,
   DownloadOutlined,
   UserOutlined,
   CalendarOutlined,
@@ -31,6 +33,7 @@ import type { WorkRecord, Profile } from '../types';
 import { calculateRecordSalary, calculateTotalSalary } from '../lib/salary';
 import { exportRecordsToExcel } from '../lib/export';
 import AddRecordModal from '../components/AddRecordModal';
+import EditRecordModal from '../components/EditRecordModal';
 import { EMPLOYEE_TYPE_LABELS } from '../types';
 
 const { Text } = Typography;
@@ -41,6 +44,8 @@ export default function Dashboard() {
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(dayjs());
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editRecord, setEditRecord] = useState<WorkRecord | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // 查看其他用户
@@ -99,6 +104,16 @@ export default function Dashboard() {
     fetchProfiles();
   }, [fetchRecords, fetchProfiles]);
 
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from('work_records').delete().eq('id', id);
+    if (error) {
+      message.error('删除失败: ' + error.message);
+    } else {
+      message.success('删除成功');
+      fetchRecords();
+    }
+  };
+
 
   const handleViewUser = async (user: Profile) => {
     setSelectedUser(user);
@@ -143,6 +158,7 @@ export default function Dashboard() {
   };
 
   const totalSalary = calculateTotalSalary(records);
+  const today = dayjs().format('YYYY-MM-DD');
 
   const columns = [
     {
@@ -189,6 +205,38 @@ export default function Dashboard() {
       dataIndex: 'notes',
       key: 'notes',
       ellipsis: true,
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 70,
+      render: (_: unknown, record: WorkRecord) => {
+        const isToday = record.record_date === today;
+        return (
+          <Space size={4}>
+            <Button
+              type="link"
+              size="small"
+              onClick={() => {
+                setEditRecord(record);
+                setEditModalOpen(true);
+              }}
+            >
+              编辑
+            </Button>
+            {isToday && (
+              <Popconfirm
+                title="确定删除此条记录？"
+                onConfirm={() => handleDelete(record.id)}
+                okText="删除"
+                cancelText="取消"
+              >
+                <Button type="link" danger size="small" icon={<DeleteOutlined />} />
+              </Popconfirm>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -328,6 +376,17 @@ export default function Dashboard() {
       <AddRecordModal
         open={showAddModal}
         onClose={() => setShowAddModal(false)}
+        onSuccess={fetchRecords}
+      />
+
+      <EditRecordModal
+        open={editModalOpen}
+        record={editRecord}
+        employeeType={profile?.employee_type || null}
+        onClose={() => {
+          setEditModalOpen(false);
+          setEditRecord(null);
+        }}
         onSuccess={fetchRecords}
       />
 

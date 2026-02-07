@@ -19,6 +19,7 @@ $$ LANGUAGE sql SECURITY DEFINER STABLE;
 -- 2. 删除旧的 RLS 策略
 DROP POLICY IF EXISTS "profiles_update" ON profiles;
 DROP POLICY IF EXISTS "records_delete" ON work_records;
+DROP POLICY IF EXISTS "records_update" ON work_records;
 DROP POLICY IF EXISTS "presets_insert_admin" ON project_presets;
 DROP POLICY IF EXISTS "presets_update_admin" ON project_presets;
 DROP POLICY IF EXISTS "presets_delete_admin" ON project_presets;
@@ -34,7 +35,15 @@ CREATE POLICY "profiles_update" ON profiles
 
 CREATE POLICY "records_delete" ON work_records
   FOR DELETE USING (
-    public.is_admin() AND user_id <> auth.uid()
+    auth.uid() = user_id OR public.is_admin()
+  );
+
+CREATE POLICY "records_update" ON work_records
+  FOR UPDATE USING (
+    auth.uid() = user_id OR public.is_admin()
+  )
+  WITH CHECK (
+    auth.uid() = user_id OR public.is_admin()
   );
 
 CREATE POLICY "presets_insert_admin" ON project_presets

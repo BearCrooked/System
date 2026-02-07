@@ -38,6 +38,7 @@ import type { WorkRecord, Profile, ProjectPreset, EmployeeTypeSetting } from '..
 import { ROLE_LABELS } from '../types';
 import { calculateRecordSalary, calculateTotalSalary, generateSalaryDetails } from '../lib/salary';
 import { exportRecordsToExcel, exportAllUsersSalaryToExcel } from '../lib/export';
+import EditRecordModal from '../components/EditRecordModal';
 
 const { Title, Text } = Typography;
 const { confirm } = Modal;
@@ -55,7 +56,8 @@ export default function Admin() {
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(dayjs());
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
-  const isSelfSelected = !!(selectedUser?.id && adminProfile?.id && selectedUser.id === adminProfile.id);
+  const [editRecord, setEditRecord] = useState<WorkRecord | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   // 薪资计算
   const [salaryModalVisible, setSalaryModalVisible] = useState(false);
@@ -155,10 +157,6 @@ export default function Admin() {
   const handleBatchDelete = () => {
     if (selectedRowKeys.length === 0) {
       message.warning('请先选择要删除的记录');
-      return;
-    }
-    if (isSelfSelected) {
-      message.warning('管理员不能删除自己的记录');
       return;
     }
 
@@ -482,6 +480,23 @@ export default function Admin() {
       key: 'notes',
       ellipsis: true,
     },
+    {
+      title: '操作',
+      key: 'action',
+      width: 80,
+      render: (_: unknown, record: WorkRecord) => (
+        <Button
+          type="link"
+          size="small"
+          onClick={() => {
+            setEditRecord(record);
+            setEditModalOpen(true);
+          }}
+        >
+          编辑
+        </Button>
+      ),
+    },
   ];
 
   // --- 预设表格 ---
@@ -632,7 +647,6 @@ export default function Admin() {
                             size="small"
                             icon={<DeleteOutlined />}
                             onClick={handleBatchDelete}
-                            disabled={isSelfSelected}
                           >
                             删除选中 ({selectedRowKeys.length})
                           </Button>
@@ -695,9 +709,6 @@ export default function Admin() {
                       rowSelection={{
                         selectedRowKeys,
                         onChange: (keys) => setSelectedRowKeys(keys as string[]),
-                        getCheckboxProps: () => ({
-                          disabled: isSelfSelected,
-                        }),
                       }}
                       columns={recordColumns}
                       dataSource={userRecords}
@@ -950,6 +961,17 @@ export default function Admin() {
           )}
         />
       </Modal>
+
+      <EditRecordModal
+        open={editModalOpen}
+        record={editRecord}
+        employeeType={selectedUser?.employee_type || null}
+        onClose={() => {
+          setEditModalOpen(false);
+          setEditRecord(null);
+        }}
+        onSuccess={fetchUserRecords}
+      />
 
       {/* 编辑/新增预设弹窗 */}
       <Modal

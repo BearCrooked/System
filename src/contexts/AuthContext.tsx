@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { supabase, nameToEmail } from '../lib/supabase';
 import type { Profile } from '../types';
@@ -20,8 +20,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const mountedRef = useRef(true);
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -32,7 +33,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('获取用户信息失败:', error.message);
         return null;
       }
-      if (data) setProfile(data as Profile);
+      if (data && mountedRef.current) {
+        setProfile(data as Profile);
+      }
       return data as Profile | null;
     } catch (err) {
       console.error('网络错误:', err);
@@ -46,51 +49,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchProfile]);
 
+  // 主认证流程：只使用 onAuthStateChange，避免竞争
   useEffect(() => {
-    let mounted = true;
+    mountedRef.current = true;
 
-    // 超时保护：最多 8 秒必须结束 loading
-    const timeout = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn('认证初始化超时，强制结束 loading');
+    // 安全超时：最多 6 秒强制结束 loading
+    const safetyTimeout = setTimeout(() => {
+      if (mountedRef.current) {
         setLoading(false);
       }
-    }, 8000);
-
-    const initAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (!mounted) return;
-
-        if (error) {
-          console.error('获取会话失败:', error.message);
-          setLoading(false);
-          return;
-        }
-
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-
-        if (currentUser) {
-          // 用 Promise.race 限制 fetchProfile 最多等 5 秒
-          await Promise.race([
-            fetchProfile(currentUser.id),
-            new Promise((resolve) => setTimeout(resolve, 5000)),
-          ]);
-        }
-      } catch (err) {
-        console.error('初始化认证失败:', err);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    initAuth();
+    }, 6000);
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
+      if (!mountedRef.current) return;
 
       const currentUser = session?.user ?? null;
       setUser(currentUser);
@@ -102,14 +75,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setProfile(null);
       }
+
+      // INITIAL_SESSION 完成后结束 loading
+      if (event === 'INITIAL_SESSION') {
+        if (mountedRef.current) setLoading(false);
+      }
     });
 
     return () => {
-      mounted = false;
-      clearTimeout(timeout);
+      mountedRef.current = false;
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, [fetchProfile]);
+
+  // 自动重试：如果 user 存在但 profile 为 null，每 2 秒重试
+  useEffect(() => {
+    if (!user || profile || loading) return;
+
+    let retryCount = 0;
+    const maxRetries = 5;
+
+    const retryInterval = setInterval(async () => {
+      if (!mountedRef.current || profile || retryCount >= maxRetries) {
+        clearInterval(retryInterval);
+        return;
+      }
+      retryCount++;
+      console.log(`重试获取 profile (${retryCount}/${maxRetries})...`);
+      const result = await fetchProfile(user.id);
+      if (result) {
+        clearInterval(retryInterval);
+      }
+    }, 2000);
+
+    return () => clearInterval(retryInterval);
+  }, [user, profile, loading, fetchProfile]);
 
   const login = async (name: string, password: string) => {
     const trimmedName = name.trim();

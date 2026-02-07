@@ -23,6 +23,7 @@ import {
   DownloadOutlined,
   UserOutlined,
   CalendarOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
@@ -223,6 +224,16 @@ export default function Dashboard() {
 
   // 其他用户（排除自己）
   const otherUsers = allProfiles.filter((p) => p.id !== profile?.id);
+
+  // profile 还没加载时显示提示
+  if (!profile) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', flexDirection: 'column', gap: 16 }}>
+        <LoadingOutlined style={{ fontSize: 32, color: '#1677ff' }} />
+        <span style={{ color: '#999' }}>正在加载用户信息...</span>
+      </div>
+    );
+  }
 
   return (
     <Row gutter={24}>

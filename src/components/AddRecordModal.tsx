@@ -54,7 +54,7 @@ export default function AddRecordModal({ open, onClose, onSuccess }: AddRecordMo
 
   const getDefaultRecord = (): RecordFormItem => ({
     project_name: '',
-    workload: 1,
+    workload: 0,
     overtime: 0,
     notes: '',
     record_date: dayjs(),
@@ -140,10 +140,10 @@ export default function AddRecordModal({ open, onClose, onSuccess }: AddRecordMo
     }
   };
 
-  // 工作量选项
-  const workloadOptions = Array.from({ length: 100 }, (_, i) => ({
-    value: i + 1,
-    label: `${i + 1}`,
+  // 工作量选项: 0-100
+  const workloadOptions = Array.from({ length: 101 }, (_, i) => ({
+    value: i,
+    label: `${i}`,
   }));
 
   // 加班选项: 0, 0.5, 1, 1.5 ... 24
@@ -254,7 +254,7 @@ export default function AddRecordModal({ open, onClose, onSuccess }: AddRecordMo
                       label={`工作量`}
                       name={[field.name, 'workload']}
                       rules={[{ required: true, message: '请输入工作量' }]}
-                      initialValue={1}
+                      initialValue={0}
                     >
                       <Select
                         showSearch

@@ -39,7 +39,7 @@ CREATE TABLE work_records (
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   user_name TEXT NOT NULL,
   project_name TEXT NOT NULL,
-  workload DECIMAL(10,2) NOT NULL DEFAULT 1,
+  workload DECIMAL(10,2) NOT NULL DEFAULT 0,
   overtime DECIMAL(10,2) NOT NULL DEFAULT 0,
   unit_price_snapshot DECIMAL(10,2) NOT NULL DEFAULT 0,
   overtime_rate_snapshot DECIMAL(10,2) NOT NULL DEFAULT 0,

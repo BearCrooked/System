@@ -27,7 +27,7 @@ export default function EditRecordModal({
   useEffect(() => {
     if (open && record) {
       form.setFieldsValue({
-        project_name: record.project_name,
+        project_name: record.project_name ? [record.project_name] : [],
         workload: record.workload,
         overtime: record.overtime,
         notes: record.notes,
@@ -69,7 +69,14 @@ export default function EditRecordModal({
       const values = await form.validateFields();
       setSubmitting(true);
 
-      const projectName = values.project_name.trim();
+      const rawProject = Array.isArray(values.project_name)
+        ? values.project_name[0]
+        : values.project_name;
+      const projectName = typeof rawProject === 'string' ? rawProject.trim() : '';
+      if (!projectName) {
+        message.error('项目名称不能为空');
+        return;
+      }
       const updates = {
         project_name: projectName,
         workload: values.workload,

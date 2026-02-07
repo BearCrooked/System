@@ -1,7 +1,11 @@
 -- ============================================
--- 修复 Admin RLS 权限问题
+-- 修复 Admin RLS 权限问题 + 移除 CHECK 约束
 -- 在 Supabase SQL Editor 中执行此文件
 -- ============================================
+
+-- 0. 移除限制 type_name 和 employee_type 的 CHECK 约束（允许自定义身份）
+ALTER TABLE employee_type_settings DROP CONSTRAINT IF EXISTS employee_type_settings_type_name_check;
+ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_employee_type_check;
 
 -- 1. 创建 is_admin() 辅助函数（绕过 RLS 递归）
 CREATE OR REPLACE FUNCTION public.is_admin()

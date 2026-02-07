@@ -8,7 +8,7 @@ CREATE TABLE profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   name TEXT UNIQUE NOT NULL,
   role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
-  employee_type TEXT NOT NULL DEFAULT 'regular' CHECK (employee_type IN ('intern', 'regular', 'manager')),
+  employee_type TEXT NOT NULL DEFAULT 'regular',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -26,7 +26,7 @@ CREATE TABLE project_presets (
 -- 3. 员工身份设置表
 CREATE TABLE employee_type_settings (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  type_name TEXT UNIQUE NOT NULL CHECK (type_name IN ('intern', 'regular', 'manager')),
+  type_name TEXT UNIQUE NOT NULL,
   type_label TEXT NOT NULL,
   daily_wage DECIMAL(10,2) NOT NULL DEFAULT 0,
   overtime_rate DECIMAL(10,2) NOT NULL DEFAULT 9,

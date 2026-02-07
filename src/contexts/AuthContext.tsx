@@ -124,7 +124,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, password: string) => {
     const trimmedName = name.trim();
     if (!trimmedName) return { error: '请输入姓名' };
-    if (password.length < 6) return { error: '密码至少6位' };
+    if (password.length < 8) return { error: '密码至少8位，需包含字母和数字' };
+    if (!/^(?=.*[a-zA-Z])(?=.*\d)/.test(password)) {
+      return { error: '密码必须包含字母和数字' };
+    }
 
     try {
       const { data: existing } = await supabase

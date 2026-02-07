@@ -53,28 +53,46 @@ export default function Dashboard() {
   const fetchRecords = useCallback(async () => {
     if (!profile) return;
     setLoading(true);
-    const startDate = selectedMonth.startOf('month').format('YYYY-MM-DD');
-    const endDate = selectedMonth.endOf('month').format('YYYY-MM-DD');
+    try {
+      const startDate = selectedMonth.startOf('month').format('YYYY-MM-DD');
+      const endDate = selectedMonth.endOf('month').format('YYYY-MM-DD');
 
-    const { data } = await supabase
-      .from('work_records')
-      .select('*')
-      .eq('user_id', profile.id)
-      .gte('record_date', startDate)
-      .lte('record_date', endDate)
-      .order('record_date', { ascending: false })
-      .order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('work_records')
+        .select('*')
+        .eq('user_id', profile.id)
+        .gte('record_date', startDate)
+        .lte('record_date', endDate)
+        .order('record_date', { ascending: false })
+        .order('created_at', { ascending: false });
 
-    setRecords((data as WorkRecord[]) || []);
-    setLoading(false);
+      if (error) {
+        console.error('获取工作记录失败:', error);
+        message.error('获取记录失败: ' + error.message);
+      }
+      setRecords((data as WorkRecord[]) || []);
+    } catch (err) {
+      console.error('网络错误:', err);
+      message.error('网络错误，请刷新重试');
+    } finally {
+      setLoading(false);
+    }
   }, [profile, selectedMonth]);
 
   const fetchProfiles = useCallback(async () => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('name');
-    if (data) setAllProfiles(data as Profile[]);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('name');
+      if (error) {
+        console.error('获取用户列表失败:', error);
+        return;
+      }
+      if (data) setAllProfiles(data as Profile[]);
+    } catch (err) {
+      console.error('网络错误:', err);
+    }
   }, []);
 
   useEffect(() => {

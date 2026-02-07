@@ -61,17 +61,37 @@ export default function AddRecordModal({ open, onClose, onSuccess }: AddRecordMo
   });
 
   const fetchPresets = async () => {
-    const { data } = await supabase
-      .from('project_presets')
-      .select('*')
-      .eq('is_active', true)
-      .order('sort_order');
-    if (data) setPresets(data);
+    try {
+      // 获取所有预设（包括停用的），确保下拉不会为空
+      const { data, error } = await supabase
+        .from('project_presets')
+        .select('*')
+        .order('sort_order');
+      if (error) {
+        console.error('获取项目预设失败:', error);
+        message.error('获取项目预设失败，请刷新重试');
+        return;
+      }
+      setPresets(data || []);
+    } catch (err) {
+      console.error('网络错误:', err);
+      message.error('网络错误，请检查连接');
+    }
   };
 
   const fetchEmployeeSettings = async () => {
-    const { data } = await supabase.from('employee_type_settings').select('*');
-    if (data) setEmployeeSettings(data);
+    try {
+      const { data, error } = await supabase
+        .from('employee_type_settings')
+        .select('*');
+      if (error) {
+        console.error('获取员工设置失败:', error);
+        return;
+      }
+      setEmployeeSettings(data || []);
+    } catch (err) {
+      console.error('网络错误:', err);
+    }
   };
 
   const getUnitPrice = (projectName: string): number => {
@@ -152,10 +172,13 @@ export default function AddRecordModal({ open, onClose, onSuccess }: AddRecordMo
     label: `${i * 0.5} 小时`,
   }));
 
-  // 项目下拉选项
+  // 项目下拉选项（优先显示启用的，停用的标灰）
   const projectOptions = presets.map((p) => ({
     value: p.project_name,
-    label: `${p.project_name} (${p.unit_price}元/${p.unit_label})`,
+    label: p.is_active
+      ? `${p.project_name} (${p.unit_price}元/${p.unit_label})`
+      : `${p.project_name} (停用)`,
+    disabled: !p.is_active,
   }));
 
   return (

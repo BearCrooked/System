@@ -70,9 +70,20 @@ export default function Admin() {
   // --- 数据加载 ---
   const fetchProfiles = useCallback(async () => {
     setProfilesLoading(true);
-    const { data } = await supabase.from('profiles').select('*').order('created_at');
-    if (data) setProfiles(data as Profile[]);
-    setProfilesLoading(false);
+    try {
+      const { data, error } = await supabase.from('profiles').select('*').order('created_at');
+      if (error) {
+        console.error('获取用户列表失败:', error);
+        message.error('获取用户列表失败: ' + error.message);
+      } else {
+        setProfiles((data as Profile[]) || []);
+      }
+    } catch (err) {
+      console.error('网络错误:', err);
+      message.error('网络错误，请刷新重试');
+    } finally {
+      setProfilesLoading(false);
+    }
   }, []);
 
   const fetchUserRecords = useCallback(async () => {

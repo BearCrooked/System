@@ -39,6 +39,7 @@ import { ROLE_LABELS } from '../types';
 import { calculateRecordSalary, calculateTotalSalary, generateSalaryDetails } from '../lib/salary';
 import { exportRecordsToExcel, exportAllUsersSalaryToExcel } from '../lib/export';
 import EditRecordModal from '../components/EditRecordModal';
+import AddRecordModal from '../components/AddRecordModal';
 
 const { Title, Text } = Typography;
 const { confirm } = Modal;
@@ -58,6 +59,7 @@ export default function Admin() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [editRecord, setEditRecord] = useState<WorkRecord | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [addRecordOpen, setAddRecordOpen] = useState(false);
 
   // 薪资计算
   const [salaryModalVisible, setSalaryModalVisible] = useState(false);
@@ -639,6 +641,14 @@ export default function Admin() {
                         >
                           薪资明细
                         </Button>
+                        <Button
+                          size="small"
+                          type="primary"
+                          icon={<PlusOutlined />}
+                          onClick={() => setAddRecordOpen(true)}
+                        >
+                          添加记录
+                        </Button>
                       </Space>
                       <Space>
                         {selectedRowKeys.length > 0 && (
@@ -971,6 +981,13 @@ export default function Admin() {
           setEditRecord(null);
         }}
         onSuccess={fetchUserRecords}
+      />
+
+      <AddRecordModal
+        open={addRecordOpen}
+        onClose={() => setAddRecordOpen(false)}
+        onSuccess={fetchUserRecords}
+        targetProfile={selectedUser}
       />
 
       {/* 编辑/新增预设弹窗 */}

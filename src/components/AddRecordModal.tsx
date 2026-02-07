@@ -15,12 +15,13 @@ import { MinusCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import type { ProjectPreset, EmployeeTypeSetting } from '../types';
+import type { ProjectPreset, EmployeeTypeSetting, Profile } from '../types';
 
 interface AddRecordModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  targetProfile?: Profile | null;
 }
 
 interface RecordFormItem {
@@ -31,8 +32,9 @@ interface RecordFormItem {
   record_date: dayjs.Dayjs;
 }
 
-export default function AddRecordModal({ open, onClose, onSuccess }: AddRecordModalProps) {
+export default function AddRecordModal({ open, onClose, onSuccess, targetProfile }: AddRecordModalProps) {
   const { profile } = useAuth();
+  const activeProfile = targetProfile ?? profile;
   const [presets, setPresets] = useState<ProjectPreset[]>([]);
   const [employeeSettings, setEmployeeSettings] = useState<EmployeeTypeSetting[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -97,7 +99,7 @@ export default function AddRecordModal({ open, onClose, onSuccess }: AddRecordMo
   const getUnitPrice = (projectName: string): number => {
     if (projectName === '上班') {
       const setting = employeeSettings.find(
-        (s) => s.type_name === profile?.employee_type
+        (s) => s.type_name === activeProfile?.employee_type
       );
       return setting?.daily_wage ?? 0;
     }
@@ -107,7 +109,7 @@ export default function AddRecordModal({ open, onClose, onSuccess }: AddRecordMo
 
   const getOvertimeRate = (): number => {
     const setting = employeeSettings.find(
-      (s) => s.type_name === profile?.employee_type
+      (s) => s.type_name === activeProfile?.employee_type
     );
     return setting?.overtime_rate ?? 9;
   };
@@ -129,12 +131,12 @@ export default function AddRecordModal({ open, onClose, onSuccess }: AddRecordMo
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      if (!profile) return;
+      if (!activeProfile) return;
 
       setSubmitting(true);
       const records = values.records.map((r: RecordFormItem) => ({
-        user_id: profile.id,
-        user_name: profile.name,
+        user_id: activeProfile.id,
+        user_name: activeProfile.name,
         project_name: r.project_name,
         workload: r.workload,
         overtime: r.overtime,

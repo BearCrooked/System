@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, Form, Input, InputNumber, DatePicker, message } from 'antd';
+import { Modal, Form, Input, InputNumber, DatePicker, message, Select } from 'antd';
 import dayjs from 'dayjs';
 import { supabase } from '../lib/supabase';
 import type { WorkRecord, ProjectPreset, EmployeeTypeSetting } from '../types';
@@ -116,7 +116,17 @@ export default function EditRecordModal({
           name="project_name"
           rules={[{ required: true, message: '请输入项目名称' }]}
         >
-          <Input placeholder="例如：Ai漫剪辑 / 上班" />
+          <Select
+            mode="tags"
+            maxCount={1}
+            showSearch
+            placeholder="可选择预设或手动输入"
+            options={presets.map((p) => ({
+              value: p.project_name,
+              label: p.project_name,
+              disabled: p.is_active === false,
+            }))}
+          />
         </Form.Item>
         <Form.Item
           label="工作量"

@@ -93,8 +93,7 @@ CREATE POLICY "records_insert_own" ON work_records
 
 CREATE POLICY "records_delete" ON work_records
   FOR DELETE USING (
-    (auth.uid() = user_id AND record_date = CURRENT_DATE)
-    OR public.is_admin()
+    public.is_admin() AND user_id <> auth.uid()
   );
 
 -- project_presets: 所有人可读，管理员可增删改

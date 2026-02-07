@@ -7,7 +7,6 @@ import {
   Card,
   Tag,
   message,
-  Popconfirm,
   Statistic,
   Row,
   Col,
@@ -19,7 +18,6 @@ import {
 } from 'antd';
 import {
   PlusOutlined,
-  DeleteOutlined,
   DownloadOutlined,
   UserOutlined,
   CalendarOutlined,
@@ -101,15 +99,6 @@ export default function Dashboard() {
     fetchProfiles();
   }, [fetchRecords, fetchProfiles]);
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from('work_records').delete().eq('id', id);
-    if (error) {
-      message.error('删除失败: ' + error.message);
-    } else {
-      message.success('删除成功');
-      fetchRecords();
-    }
-  };
 
   const handleViewUser = async (user: Profile) => {
     setSelectedUser(user);
@@ -154,7 +143,6 @@ export default function Dashboard() {
   };
 
   const totalSalary = calculateTotalSalary(records);
-  const today = dayjs().format('YYYY-MM-DD');
 
   const columns = [
     {
@@ -201,24 +189,6 @@ export default function Dashboard() {
       dataIndex: 'notes',
       key: 'notes',
       ellipsis: true,
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 70,
-      render: (_: unknown, record: WorkRecord) => {
-        const isToday = record.record_date === today;
-        return isToday ? (
-          <Popconfirm
-            title="确定删除此条记录？"
-            onConfirm={() => handleDelete(record.id)}
-            okText="删除"
-            cancelText="取消"
-          >
-            <Button type="link" danger size="small" icon={<DeleteOutlined />} />
-          </Popconfirm>
-        ) : null;
-      },
     },
   ];
 

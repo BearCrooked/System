@@ -34,8 +34,7 @@ CREATE POLICY "profiles_update" ON profiles
 
 CREATE POLICY "records_delete" ON work_records
   FOR DELETE USING (
-    (auth.uid() = user_id AND record_date = CURRENT_DATE)
-    OR public.is_admin()
+    public.is_admin() AND user_id <> auth.uid()
   );
 
 CREATE POLICY "presets_insert_admin" ON project_presets

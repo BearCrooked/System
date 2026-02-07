@@ -55,6 +55,7 @@ export default function Admin() {
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(dayjs());
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const isSelfSelected = !!(selectedUser?.id && adminProfile?.id && selectedUser.id === adminProfile.id);
 
   // 薪资计算
   const [salaryModalVisible, setSalaryModalVisible] = useState(false);
@@ -154,6 +155,10 @@ export default function Admin() {
   const handleBatchDelete = () => {
     if (selectedRowKeys.length === 0) {
       message.warning('请先选择要删除的记录');
+      return;
+    }
+    if (isSelfSelected) {
+      message.warning('管理员不能删除自己的记录');
       return;
     }
 
@@ -627,6 +632,7 @@ export default function Admin() {
                             size="small"
                             icon={<DeleteOutlined />}
                             onClick={handleBatchDelete}
+                            disabled={isSelfSelected}
                           >
                             删除选中 ({selectedRowKeys.length})
                           </Button>
@@ -689,6 +695,9 @@ export default function Admin() {
                       rowSelection={{
                         selectedRowKeys,
                         onChange: (keys) => setSelectedRowKeys(keys as string[]),
+                        getCheckboxProps: () => ({
+                          disabled: isSelfSelected,
+                        }),
                       }}
                       columns={recordColumns}
                       dataSource={userRecords}

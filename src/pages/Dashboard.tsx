@@ -38,18 +38,61 @@ import { EMPLOYEE_TYPE_LABELS } from '../types';
 const { Text } = Typography;
 
 export default function Dashboard() {
-  const { profile } = useAuth();
+  const { user, profile: contextProfile } = useAuth();
+  const [localProfile, setLocalProfile] = useState<Profile | null>(null);
   const [records, setRecords] = useState<WorkRecord[]>([]);
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(dayjs());
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   // 查看其他用户
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [selectedUserRecords, setSelectedUserRecords] = useState<WorkRecord[]>([]);
   const [userModalVisible, setUserModalVisible] = useState(false);
   const [userRecordsLoading, setUserRecordsLoading] = useState(false);
+
+  // 优先用 context 的 profile，否则用本地获取的
+  const profile = contextProfile || localProfile;
+
+  // 如果 context 没有 profile，自己直接获取
+  useEffect(() => {
+    if (contextProfile || !user) return;
+    let cancelled = false;
+    setProfileLoading(true);
+
+    const loadProfile = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        if (!cancelled && data && !error) {
+          setLocalProfile(data as Profile);
+        }
+        if (error) {
+          console.error('Dashboard 直接获取 profile 失败:', error.message);
+        }
+      } catch (err) {
+        console.error('网络错误:', err);
+      } finally {
+        if (!cancelled) setProfileLoading(false);
+      }
+    };
+
+    loadProfile();
+    return () => { cancelled = true; };
+  }, [user, contextProfile]);
+
+  // 当 context profile 加载成功后同步
+  useEffect(() => {
+    if (contextProfile) {
+      setLocalProfile(null);
+      setProfileLoading(false);
+    }
+  }, [contextProfile]);
 
   const fetchRecords = useCallback(async () => {
     if (!profile) return;
@@ -226,7 +269,7 @@ export default function Dashboard() {
   const otherUsers = allProfiles.filter((p) => p.id !== profile?.id);
 
   // profile 还没加载时显示提示
-  if (!profile) {
+  if (!profile && profileLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', flexDirection: 'column', gap: 16 }}>
         <LoadingOutlined style={{ fontSize: 32, color: '#1677ff' }} />

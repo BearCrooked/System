@@ -238,25 +238,25 @@ export default function Dashboard() {
           </div>
 
           {/* 薪资统计 */}
-          <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col span={8}>
+          <Row gutter={[16, 8]} style={{ marginBottom: 16 }}>
+            <Col xs={8} sm={8}>
               <Statistic
-                title="本月记录数"
+                title="本月记录"
                 value={records.length}
                 suffix="条"
               />
             </Col>
-            <Col span={8}>
+            <Col xs={8} sm={8}>
               <Statistic
-                title="本月总加班"
+                title="总加班"
                 value={records.reduce((s, r) => s + r.overtime, 0)}
-                suffix="小时"
+                suffix="h"
                 precision={1}
               />
             </Col>
-            <Col span={8}>
+            <Col xs={8} sm={8}>
               <Statistic
-                title="本月薪资"
+                title="月薪资"
                 value={totalSalary}
                 prefix="¥"
                 precision={0}
@@ -272,6 +272,7 @@ export default function Dashboard() {
             rowKey="id"
             loading={loading}
             size="middle"
+            scroll={{ x: 650 }}
             pagination={{ pageSize: 20, showTotal: (total) => `共 ${total} 条` }}
             locale={{ emptyText: <Empty description="暂无工作记录" /> }}
           />
@@ -325,7 +326,8 @@ export default function Dashboard() {
         open={userModalVisible}
         onCancel={() => setUserModalVisible(false)}
         footer={null}
-        width={800}
+        width="90%"
+        style={{ maxWidth: 800 }}
       >
         {selectedUserRecords.length > 0 && (
           <div style={{ marginBottom: 16 }}>
@@ -343,6 +345,7 @@ export default function Dashboard() {
           rowKey="id"
           loading={userRecordsLoading}
           size="small"
+          scroll={{ x: 500 }}
           pagination={false}
           locale={{ emptyText: <Empty description="该用户本月暂无记录" /> }}
         />

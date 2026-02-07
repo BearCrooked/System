@@ -513,6 +513,7 @@ export default function Admin() {
                     rowKey="id"
                     loading={profilesLoading}
                     size="small"
+                    scroll={{ x: 600 }}
                     pagination={false}
                   />
                 </Card>
@@ -594,29 +595,29 @@ export default function Admin() {
                     </div>
 
                     {/* 统计 */}
-                    <Row gutter={16} style={{ marginBottom: 16 }}>
-                      <Col span={6}>
+                    <Row gutter={[12, 8]} style={{ marginBottom: 16 }}>
+                      <Col xs={12} sm={6}>
                         <Statistic
                           title="记录数"
                           value={userRecords.length}
                           suffix="条"
                         />
                       </Col>
-                      <Col span={6}>
+                      <Col xs={12} sm={6}>
                         <Statistic
                           title="总工作量"
                           value={userRecords.reduce((s, r) => s + r.workload, 0)}
                         />
                       </Col>
-                      <Col span={6}>
+                      <Col xs={12} sm={6}>
                         <Statistic
                           title="总加班"
                           value={userRecords.reduce((s, r) => s + r.overtime, 0)}
-                          suffix="小时"
+                          suffix="h"
                           precision={1}
                         />
                       </Col>
-                      <Col span={6}>
+                      <Col xs={12} sm={6}>
                         <Statistic
                           title="月薪合计"
                           value={totalSalary}
@@ -638,6 +639,7 @@ export default function Admin() {
                       rowKey="id"
                       loading={recordsLoading}
                       size="small"
+                      scroll={{ x: 650 }}
                       pagination={{ pageSize: 30 }}
                     />
                   </Card>
@@ -675,6 +677,7 @@ export default function Admin() {
                       dataSource={presets}
                       rowKey="id"
                       size="small"
+                      scroll={{ x: 500 }}
                       pagination={false}
                     />
                   </Card>
@@ -689,8 +692,8 @@ export default function Admin() {
                           <Title level={5}>
                             {setting.type_label}（{setting.type_name}）
                           </Title>
-                          <Row gutter={12}>
-                            <Col span={10}>
+                          <Row gutter={[12, 0]}>
+                            <Col xs={11} sm={10}>
                               <Form.Item
                                 label="日薪(元)"
                                 name={`daily_wage_${setting.type_name}`}
@@ -703,7 +706,7 @@ export default function Admin() {
                                 />
                               </Form.Item>
                             </Col>
-                            <Col span={10}>
+                            <Col xs={11} sm={10}>
                               <Form.Item
                                 label="加班费率(元/时)"
                                 name={`overtime_rate_${setting.type_name}`}
@@ -716,7 +719,7 @@ export default function Admin() {
                                 />
                               </Form.Item>
                             </Col>
-                            <Col span={4}>
+                            <Col xs={2} sm={4}>
                               <Form.Item label=" ">
                                 <Button
                                   type="primary"
@@ -745,7 +748,8 @@ export default function Admin() {
         title={`${selectedUser?.name} - ${selectedMonth.format('YYYY年MM月')} 薪资明细`}
         open={salaryModalVisible}
         onCancel={() => setSalaryModalVisible(false)}
-        width={700}
+        width="92%"
+        style={{ maxWidth: 700 }}
         footer={[
           <Button key="export" icon={<DownloadOutlined />} onClick={handleExportUserSalary}>
             导出Excel
@@ -759,6 +763,7 @@ export default function Admin() {
           dataSource={salaryDetails}
           rowKey="projectName"
           size="small"
+          scroll={{ x: 550 }}
           pagination={false}
           columns={[
             { title: '项目', dataIndex: 'projectName', key: 'projectName' },
@@ -827,8 +832,8 @@ export default function Admin() {
           >
             <Input placeholder="例如: Ai漫剪辑" />
           </Form.Item>
-          <Row gutter={16}>
-            <Col span={8}>
+          <Row gutter={12}>
+            <Col xs={24} sm={8}>
               <Form.Item
                 label="单价(元)"
                 name="unit_price"
@@ -838,7 +843,7 @@ export default function Admin() {
                 <InputNumber style={{ width: '100%' }} min={0} precision={2} />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col xs={12} sm={8}>
               <Form.Item
                 label="单位"
                 name="unit_label"
@@ -854,7 +859,7 @@ export default function Admin() {
                 />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col xs={12} sm={8}>
               <Form.Item label="排序" name="sort_order" initialValue={0}>
                 <InputNumber style={{ width: '100%' }} min={0} />
               </Form.Item>

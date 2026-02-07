@@ -49,7 +49,8 @@ export default function Login() {
     >
       <Card
         style={{
-          width: 420,
+          width: '92%',
+          maxWidth: 420,
           boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
           borderRadius: 12,
         }}

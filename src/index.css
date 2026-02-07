@@ -32,12 +32,86 @@ body {
   background: #999;
 }
 
-/* Ant Design 表格行悬浮 */
-.ant-table-tbody > tr:hover > td {
-  transition: background-color 0.2s;
-}
-
 /* 卡片间距 */
 .ant-card + .ant-card {
   margin-top: 16px;
+}
+
+/* 添加记录表单网格 - 桌面端双列 */
+.record-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+}
+
+/* ====== 移动端适配 (< 768px) ====== */
+@media screen and (max-width: 768px) {
+  /* 显示汉堡菜单按钮 */
+  .mobile-menu-btn {
+    display: inline-flex !important;
+  }
+
+  /* 隐藏桌面端水平菜单 */
+  .desktop-menu {
+    display: none !important;
+  }
+
+  /* 隐藏用户名文字，只保留图标 */
+  .desktop-username {
+    display: none;
+  }
+
+  /* 内容区域减少内边距 */
+  .app-content {
+    padding: 8px !important;
+  }
+
+  /* 添加记录表单 - 手机单列 */
+  .record-form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  /* 统计数字缩小 */
+  .ant-statistic-title {
+    font-size: 12px !important;
+  }
+
+  .ant-statistic-content {
+    font-size: 18px !important;
+  }
+
+  /* 表格紧凑 */
+  .ant-table-cell {
+    padding: 6px 8px !important;
+    font-size: 13px;
+  }
+
+  /* 卡片内边距减少 */
+  .ant-card-body {
+    padding: 12px !important;
+  }
+
+  /* 标签页紧凑 */
+  .ant-tabs-nav {
+    margin-bottom: 12px !important;
+  }
+}
+
+/* ====== 超小屏幕 (< 480px) ====== */
+@media screen and (max-width: 480px) {
+  .ant-statistic-content {
+    font-size: 16px !important;
+  }
+
+  .ant-table-cell {
+    padding: 4px 6px !important;
+    font-size: 12px;
+  }
+
+  /* 按钮文字缩小 */
+  .ant-btn-sm {
+    font-size: 12px;
+    padding: 0 6px;
+  }
 }

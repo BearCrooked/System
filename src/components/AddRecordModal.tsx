@@ -163,7 +163,8 @@ export default function AddRecordModal({ open, onClose, onSuccess }: AddRecordMo
       title="添加工作记录"
       open={open}
       onCancel={onClose}
-      width={700}
+      width="92%"
+      style={{ maxWidth: 700 }}
       footer={[
         <Button key="cancel" onClick={onClose}>
           取消
@@ -215,7 +216,7 @@ export default function AddRecordModal({ open, onClose, onSuccess }: AddRecordMo
                     ) : null
                   }
                 >
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                  <div className="record-form-grid">
                     <Form.Item
                       {...field}
                       label="日期"

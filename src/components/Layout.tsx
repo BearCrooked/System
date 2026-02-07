@@ -54,7 +54,7 @@ export default function AppLayout() {
       key: 'info',
       label: (
         <Space>
-          <span>身份: {EMPLOYEE_TYPE_LABELS[profile?.employee_type || 'regular']}</span>
+          <span>身份: {EMPLOYEE_TYPE_LABELS[profile?.employee_type || 'regular'] || profile?.employee_type}</span>
           <Tag color={isAdmin ? 'red' : 'blue'}>{isAdmin ? '管理员' : '用户'}</Tag>
         </Space>
       ),
@@ -142,7 +142,7 @@ export default function AppLayout() {
             </Tag>
           </Space>
           <div style={{ marginTop: 4, color: '#999', fontSize: 12 }}>
-            {EMPLOYEE_TYPE_LABELS[profile?.employee_type || 'regular']}
+            {EMPLOYEE_TYPE_LABELS[profile?.employee_type || 'regular'] || profile?.employee_type}
           </div>
         </div>
         <Menu

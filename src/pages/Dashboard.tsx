@@ -316,7 +316,7 @@ export default function Dashboard() {
                       <Space>
                         <span>{user.name}</span>
                         <Tag style={{ fontSize: 11 }}>
-                          {EMPLOYEE_TYPE_LABELS[user.employee_type]}
+                          {EMPLOYEE_TYPE_LABELS[user.employee_type] || user.employee_type}
                         </Tag>
                       </Space>
                     }

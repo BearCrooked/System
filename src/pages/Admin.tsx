@@ -35,7 +35,7 @@ import dayjs from 'dayjs';
 import { supabase, nameToEmail } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import type { WorkRecord, Profile, ProjectPreset, EmployeeTypeSetting } from '../types';
-import { EMPLOYEE_TYPE_LABELS, ROLE_LABELS } from '../types';
+import { ROLE_LABELS } from '../types';
 import { calculateRecordSalary, calculateTotalSalary, generateSalaryDetails } from '../lib/salary';
 import { exportRecordsToExcel, exportAllUsersSalaryToExcel } from '../lib/export';
 
@@ -66,6 +66,8 @@ export default function Admin() {
   const [editingPreset, setEditingPreset] = useState<ProjectPreset | null>(null);
   const [presetForm] = Form.useForm();
   const [settingsForm] = Form.useForm();
+  const [addEmployeeTypeModal, setAddEmployeeTypeModal] = useState(false);
+  const [employeeTypeForm] = Form.useForm();
 
   // --- 数据加载 ---
   const fetchProfiles = useCallback(async () => {
@@ -310,6 +312,42 @@ export default function Admin() {
     }
   };
 
+  // --- 新增员工身份 ---
+  const handleAddEmployeeType = async () => {
+    try {
+      const values = await employeeTypeForm.validateFields();
+      const { error } = await supabase.from('employee_type_settings').insert({
+        type_name: values.type_name.trim(),
+        type_label: values.type_label.trim(),
+        daily_wage: values.daily_wage ?? 0,
+        overtime_rate: values.overtime_rate ?? 0,
+      });
+      if (error) throw error;
+      message.success('身份添加成功');
+      setAddEmployeeTypeModal(false);
+      employeeTypeForm.resetFields();
+      fetchEmployeeSettings();
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'message' in err) {
+        message.error('添加失败: ' + (err as { message: string }).message);
+      }
+    }
+  };
+
+  // --- 删除员工身份 ---
+  const handleDeleteEmployeeType = async (setting: EmployeeTypeSetting) => {
+    const { error } = await supabase
+      .from('employee_type_settings')
+      .delete()
+      .eq('id', setting.id);
+    if (error) {
+      message.error('删除失败: ' + error.message);
+    } else {
+      message.success(`${setting.type_label} 已删除`);
+      fetchEmployeeSettings();
+    }
+  };
+
   // --- 用户列表表格 ---
   const userColumns = [
     {
@@ -345,13 +383,20 @@ export default function Admin() {
         <Select
           value={type}
           size="small"
-          style={{ width: 100 }}
+          style={{ width: 110 }}
           onChange={(val) => handleUpdateProfile(record.id, 'employee_type', val)}
-          options={[
-            { value: 'intern', label: '实习' },
-            { value: 'regular', label: '正式' },
-            { value: 'manager', label: '管理' },
-          ]}
+          options={
+            employeeSettings.length > 0
+              ? employeeSettings.map((s) => ({
+                  value: s.type_name,
+                  label: s.type_label,
+                }))
+              : [
+                  { value: 'intern', label: '实习' },
+                  { value: 'regular', label: '正式' },
+                  { value: 'manager', label: '管理' },
+                ]
+          }
         />
       ),
     },
@@ -535,7 +580,7 @@ export default function Admin() {
                     title={
                       <Space>
                         <span>{selectedUser.name} 的工作记录</span>
-                        <Tag>{EMPLOYEE_TYPE_LABELS[selectedUser.employee_type]}</Tag>
+                        <Tag>{employeeSettings.find(s => s.type_name === selectedUser.employee_type)?.type_label || selectedUser.employee_type}</Tag>
                         <Tag color={selectedUser.role === 'admin' ? 'red' : 'blue'}>
                           {ROLE_LABELS[selectedUser.role]}
                         </Tag>
@@ -696,15 +741,43 @@ export default function Admin() {
 
                 {/* 员工身份设置 */}
                 <Col xs={24} lg={10}>
-                  <Card title="员工身份设置" size="small">
+                  <Card
+                    title="员工身份设置"
+                    size="small"
+                    extra={
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<PlusOutlined />}
+                        onClick={() => {
+                          employeeTypeForm.resetFields();
+                          setAddEmployeeTypeModal(true);
+                        }}
+                      >
+                        新增身份
+                      </Button>
+                    }
+                  >
                     <Form form={settingsForm} layout="vertical">
                       {employeeSettings.map((setting) => (
                         <div key={setting.id}>
-                          <Title level={5}>
-                            {setting.type_label}（{setting.type_name}）
-                          </Title>
-                          <Row gutter={[12, 0]}>
-                            <Col xs={11} sm={10}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Title level={5} style={{ margin: 0 }}>
+                              {setting.type_label}（{setting.type_name}）
+                            </Title>
+                            <Popconfirm
+                              title={`确定删除身份「${setting.type_label}」吗？`}
+                              onConfirm={() => handleDeleteEmployeeType(setting)}
+                              okText="确定"
+                              cancelText="取消"
+                            >
+                              <Button type="link" danger size="small" icon={<DeleteOutlined />}>
+                                删除
+                              </Button>
+                            </Popconfirm>
+                          </div>
+                          <Row gutter={[12, 0]} style={{ marginTop: 8 }}>
+                            <Col xs={10} sm={10}>
                               <Form.Item
                                 label="日薪(元)"
                                 name={`daily_wage_${setting.type_name}`}
@@ -717,7 +790,7 @@ export default function Admin() {
                                 />
                               </Form.Item>
                             </Col>
-                            <Col xs={11} sm={10}>
+                            <Col xs={10} sm={10}>
                               <Form.Item
                                 label="加班费率(元/时)"
                                 name={`overtime_rate_${setting.type_name}`}
@@ -730,7 +803,7 @@ export default function Admin() {
                                 />
                               </Form.Item>
                             </Col>
-                            <Col xs={2} sm={4}>
+                            <Col xs={4} sm={4}>
                               <Form.Item label=" ">
                                 <Button
                                   type="primary"
@@ -753,6 +826,52 @@ export default function Admin() {
           },
         ]}
       />
+
+      {/* 新增员工身份弹窗 */}
+      <Modal
+        title="新增员工身份"
+        open={addEmployeeTypeModal}
+        onOk={handleAddEmployeeType}
+        onCancel={() => {
+          setAddEmployeeTypeModal(false);
+          employeeTypeForm.resetFields();
+        }}
+        okText="添加"
+        cancelText="取消"
+        width={420}
+      >
+        <Form form={employeeTypeForm} layout="vertical">
+          <Form.Item
+            label="身份标识 (英文，如 designer)"
+            name="type_name"
+            rules={[
+              { required: true, message: '请输入身份标识' },
+              { pattern: /^[a-zA-Z_]+$/, message: '只能包含英文字母和下划线' },
+            ]}
+          >
+            <Input placeholder="例如: designer" />
+          </Form.Item>
+          <Form.Item
+            label="显示名称 (中文，如 设计师)"
+            name="type_label"
+            rules={[{ required: true, message: '请输入显示名称' }]}
+          >
+            <Input placeholder="例如: 设计师" />
+          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="日薪 (元)" name="daily_wage" initialValue={0}>
+                <InputNumber style={{ width: '100%' }} min={0} precision={2} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="加班费率 (元/时)" name="overtime_rate" initialValue={0}>
+                <InputNumber style={{ width: '100%' }} min={0} precision={2} />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
 
       {/* 薪资明细弹窗 */}
       <Modal

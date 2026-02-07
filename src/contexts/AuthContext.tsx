@@ -43,83 +43,90 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const fetchProfileWithRetry = useCallback(
+    async (userId: string) => {
+      let attempts = 0;
+      while (attempts < 3) {
+        const result = await fetchProfile(userId);
+        if (result) return result;
+
+        // 尝试刷新 session 后重试
+        try {
+          await supabase.auth.refreshSession();
+        } catch (err) {
+          console.error('刷新 session 失败:', err);
+        }
+
+        attempts += 1;
+        await new Promise((r) => setTimeout(r, attempts * 500));
+      }
+      return null;
+    },
+    [fetchProfile]
+  );
+
   const refreshProfile = useCallback(async () => {
     if (user) {
-      await fetchProfile(user.id);
+      await fetchProfileWithRetry(user.id);
     }
-  }, [user, fetchProfile]);
+  }, [user, fetchProfileWithRetry]);
 
-  // ======= 核心：onAuthStateChange 回调必须同步，不能 await =======
+  // ======= 初始化：先 getSession 再订阅事件 =======
   useEffect(() => {
     mountedRef.current = true;
+
+    let cancelled = false;
+
+    const init = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (cancelled || !mountedRef.current) return;
+        if (error) {
+          console.error('获取 session 失败:', error.message);
+        }
+        const currentUser = data.session?.user ?? null;
+        setUser(currentUser);
+        if (currentUser) {
+          await fetchProfileWithRetry(currentUser.id);
+        } else {
+          setProfile(null);
+        }
+      } catch (err) {
+        console.error('初始化 session 失败:', err);
+      } finally {
+        if (!cancelled && mountedRef.current) {
+          setLoading(false);
+        }
+      }
+    };
+
+    init();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mountedRef.current) return;
 
-      // 只做同步的 state 更新，绝不 await
       setUser(session?.user ?? null);
-
       if (!session?.user) {
         setProfile(null);
+        return;
       }
 
-      if (_event === 'INITIAL_SESSION') {
-        setLoading(false);
-      }
+      // 不在回调里 await，异步刷新 profile
+      setTimeout(() => {
+        if (mountedRef.current && session?.user) {
+          void fetchProfileWithRetry(session.user.id);
+        }
+      }, 0);
     });
-
-    // 安全超时兜底
-    const safetyTimeout = setTimeout(() => {
-      if (mountedRef.current) setLoading(false);
-    }, 5000);
 
     return () => {
       mountedRef.current = false;
-      clearTimeout(safetyTimeout);
+      cancelled = true;
       subscription.unsubscribe();
     };
-  }, []);
-
-  // ======= Profile 加载：独立 effect，带重试 =======
-  const userIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    const userId = user?.id ?? null;
-
-    // 用户没变，不重新加载
-    if (userId === userIdRef.current && profile) return;
-    userIdRef.current = userId;
-
-    if (!userId) {
-      setProfile(null);
-      return;
-    }
-
-    let cancelled = false;
-    let retryTimer: ReturnType<typeof setTimeout>;
-
-    const load = async (attempt: number) => {
-      if (cancelled) return;
-      const result = await fetchProfile(userId);
-      if (result || cancelled) return;
-
-      // 失败后重试，最多 4 次，间隔递增
-      if (attempt < 4) {
-        const delay = attempt * 1500; // 1.5s, 3s, 4.5s
-        retryTimer = setTimeout(() => load(attempt + 1), delay);
-      }
-    };
-
-    // 首次加载延迟 100ms，让 token 刷新有时间完成
-    retryTimer = setTimeout(() => load(1), 100);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(retryTimer);
-    };
-  }, [user, profile, fetchProfile]);
+  }, [fetchProfileWithRetry]);
 
   const login = async (name: string, password: string) => {
     const trimmedName = name.trim();

@@ -49,6 +49,18 @@ CREATE TABLE work_records (
 );
 
 -- ============================================
+-- 辅助函数: 检查当前用户是否为管理员
+-- 使用 SECURITY DEFINER 绕过 RLS 递归问题
+-- ============================================
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- ============================================
 -- 启用 RLS（行级安全）
 -- ============================================
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
@@ -60,7 +72,7 @@ ALTER TABLE employee_type_settings ENABLE ROW LEVEL SECURITY;
 -- RLS 策略
 -- ============================================
 
--- profiles: 所有人可读，自己可插入，管理员可更新所有人
+-- profiles: 所有人可读，自己可插入，自己或管理员可更新
 CREATE POLICY "profiles_select_all" ON profiles
   FOR SELECT USING (true);
 
@@ -69,11 +81,10 @@ CREATE POLICY "profiles_insert_own" ON profiles
 
 CREATE POLICY "profiles_update" ON profiles
   FOR UPDATE USING (
-    auth.uid() = id
-    OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    auth.uid() = id OR public.is_admin()
   );
 
--- work_records: 所有人可读，用户只能插入自己的，删除限当天自己的或管理员
+-- work_records: 所有人可读，用户插入自己的，删除限当天或管理员
 CREATE POLICY "records_select_all" ON work_records
   FOR SELECT USING (true);
 
@@ -83,7 +94,7 @@ CREATE POLICY "records_insert_own" ON work_records
 CREATE POLICY "records_delete" ON work_records
   FOR DELETE USING (
     (auth.uid() = user_id AND record_date = CURRENT_DATE)
-    OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+    OR public.is_admin()
   );
 
 -- project_presets: 所有人可读，管理员可增删改
@@ -91,38 +102,26 @@ CREATE POLICY "presets_select_all" ON project_presets
   FOR SELECT USING (true);
 
 CREATE POLICY "presets_insert_admin" ON project_presets
-  FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR INSERT WITH CHECK (public.is_admin());
 
 CREATE POLICY "presets_update_admin" ON project_presets
-  FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR UPDATE USING (public.is_admin());
 
 CREATE POLICY "presets_delete_admin" ON project_presets
-  FOR DELETE USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR DELETE USING (public.is_admin());
 
 -- employee_type_settings: 所有人可读，管理员可改
 CREATE POLICY "ets_select_all" ON employee_type_settings
   FOR SELECT USING (true);
 
 CREATE POLICY "ets_insert_admin" ON employee_type_settings
-  FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR INSERT WITH CHECK (public.is_admin());
 
 CREATE POLICY "ets_update_admin" ON employee_type_settings
-  FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR UPDATE USING (public.is_admin());
 
 CREATE POLICY "ets_delete_admin" ON employee_type_settings
-  FOR DELETE USING (
-    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-  );
+  FOR DELETE USING (public.is_admin());
 
 -- ============================================
 -- 触发器: 用户注册时自动创建 profile

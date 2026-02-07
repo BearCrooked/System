@@ -97,19 +97,13 @@ export default function Login() {
             rules={[
               { required: true, message: '请输入密码' },
               ...(activeTab === 'register'
-                ? [
-                    { min: 8, message: '密码至少8位' },
-                    {
-                      pattern: /^(?=.*[a-zA-Z])(?=.*\d)/,
-                      message: '密码必须包含字母和数字',
-                    },
-                  ]
+                ? [{ min: 6, message: '密码至少6位' }]
                 : []),
             ]}
           >
             <Input.Password
               prefix={<LockOutlined />}
-              placeholder={activeTab === 'register' ? '密码（至少8位，含字母和数字）' : '密码'}
+              placeholder="密码"
               autoComplete={activeTab === 'login' ? 'current-password' : 'new-password'}
             />
           </Form.Item>

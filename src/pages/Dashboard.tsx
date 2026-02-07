@@ -114,20 +114,32 @@ export default function Dashboard() {
     setSelectedUser(user);
     setUserModalVisible(true);
     setUserRecordsLoading(true);
+    setSelectedUserRecords([]);
 
-    const startDate = selectedMonth.startOf('month').format('YYYY-MM-DD');
-    const endDate = selectedMonth.endOf('month').format('YYYY-MM-DD');
+    try {
+      const startDate = selectedMonth.startOf('month').format('YYYY-MM-DD');
+      const endDate = selectedMonth.endOf('month').format('YYYY-MM-DD');
 
-    const { data } = await supabase
-      .from('work_records')
-      .select('*')
-      .eq('user_id', user.id)
-      .gte('record_date', startDate)
-      .lte('record_date', endDate)
-      .order('record_date', { ascending: false });
+      const { data, error } = await supabase
+        .from('work_records')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('record_date', startDate)
+        .lte('record_date', endDate)
+        .order('record_date', { ascending: false });
 
-    setSelectedUserRecords((data as WorkRecord[]) || []);
-    setUserRecordsLoading(false);
+      if (error) {
+        console.error('获取用户记录失败:', error);
+        message.error('获取用户记录失败: ' + error.message);
+      } else {
+        setSelectedUserRecords((data as WorkRecord[]) || []);
+      }
+    } catch (err) {
+      console.error('网络错误:', err);
+      message.error('网络错误，请刷新重试');
+    } finally {
+      setUserRecordsLoading(false);
+    }
   };
 
   const handleExport = () => {

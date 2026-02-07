@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return data as Profile | null;
     } catch (err) {
-      console.error('网络错误:', err);
+      console.error('fetchProfile 网络错误:', err);
       return null;
     }
   }, []);
@@ -49,68 +49,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchProfile]);
 
-  // 主认证流程：只使用 onAuthStateChange，避免竞争
+  // ======= 核心：onAuthStateChange 回调必须同步，不能 await =======
   useEffect(() => {
     mountedRef.current = true;
 
-    // 安全超时：最多 6 秒强制结束 loading
-    const safetyTimeout = setTimeout(() => {
-      if (mountedRef.current) {
-        setLoading(false);
-      }
-    }, 6000);
-
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mountedRef.current) return;
 
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
+      // 只做同步的 state 更新，绝不 await
+      setUser(session?.user ?? null);
 
-      if (currentUser) {
-        if (event !== 'TOKEN_REFRESHED') {
-          await fetchProfile(currentUser.id);
-        }
-      } else {
+      if (!session?.user) {
         setProfile(null);
       }
 
-      // INITIAL_SESSION 完成后结束 loading
-      if (event === 'INITIAL_SESSION') {
-        if (mountedRef.current) setLoading(false);
+      if (_event === 'INITIAL_SESSION') {
+        setLoading(false);
       }
     });
+
+    // 安全超时兜底
+    const safetyTimeout = setTimeout(() => {
+      if (mountedRef.current) setLoading(false);
+    }, 5000);
 
     return () => {
       mountedRef.current = false;
       clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
-  }, [fetchProfile]);
+  }, []);
 
-  // 自动重试：如果 user 存在但 profile 为 null，每 2 秒重试
+  // ======= Profile 加载：独立 effect，带重试 =======
+  const userIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!user || profile || loading) return;
+    const userId = user?.id ?? null;
 
-    let retryCount = 0;
-    const maxRetries = 5;
+    // 用户没变，不重新加载
+    if (userId === userIdRef.current && profile) return;
+    userIdRef.current = userId;
 
-    const retryInterval = setInterval(async () => {
-      if (!mountedRef.current || profile || retryCount >= maxRetries) {
-        clearInterval(retryInterval);
-        return;
+    if (!userId) {
+      setProfile(null);
+      return;
+    }
+
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout>;
+
+    const load = async (attempt: number) => {
+      if (cancelled) return;
+      const result = await fetchProfile(userId);
+      if (result || cancelled) return;
+
+      // 失败后重试，最多 4 次，间隔递增
+      if (attempt < 4) {
+        const delay = attempt * 1500; // 1.5s, 3s, 4.5s
+        retryTimer = setTimeout(() => load(attempt + 1), delay);
       }
-      retryCount++;
-      console.log(`重试获取 profile (${retryCount}/${maxRetries})...`);
-      const result = await fetchProfile(user.id);
-      if (result) {
-        clearInterval(retryInterval);
-      }
-    }, 2000);
+    };
 
-    return () => clearInterval(retryInterval);
-  }, [user, profile, loading, fetchProfile]);
+    // 首次加载延迟 100ms，让 token 刷新有时间完成
+    retryTimer = setTimeout(() => load(1), 100);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(retryTimer);
+    };
+  }, [user, profile, fetchProfile]);
 
   const login = async (name: string, password: string) => {
     const trimmedName = name.trim();

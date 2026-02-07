@@ -49,6 +49,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
+    // 超时保护：最多 8 秒必须结束 loading
+    const timeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('认证初始化超时，强制结束 loading');
+        setLoading(false);
+      }
+    }, 8000);
+
     const initAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -64,7 +72,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(currentUser);
 
         if (currentUser) {
-          await fetchProfile(currentUser.id);
+          // 用 Promise.race 限制 fetchProfile 最多等 5 秒
+          await Promise.race([
+            fetchProfile(currentUser.id),
+            new Promise((resolve) => setTimeout(resolve, 5000)),
+          ]);
         }
       } catch (err) {
         console.error('初始化认证失败:', err);
@@ -84,7 +96,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(currentUser);
 
       if (currentUser) {
-        // TOKEN_REFRESHED 事件不需要重新拉取 profile
         if (event !== 'TOKEN_REFRESHED') {
           await fetchProfile(currentUser.id);
         }
@@ -95,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
+      clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, [fetchProfile]);
